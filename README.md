@@ -100,6 +100,7 @@ curl -s http://<alb-dns>/whoami -H "Authorization: Bearer $TOKEN"           # 40
 - `POST /session/:id/invalidate` → `GET /whoami` starts returning 401 `Session has been invalidated`
 - `POST /session/:id/invalidate` with non-existent id → 404
 - Wait 3 min, call `GET /whoami` with the same token → 401 `Token expired`
+- Scale app-service from 2 to 3 instances → new instance auto-subscribes to SNS, receives invalidation events, `GET /whoami` returns 401 on all 3 instances
 
 ## Design decisions
 
