@@ -53,14 +53,24 @@ This project solves that by having each Application Service maintain a local in 
 ## Deploy
 
 ```bash
-cd terraform && terraform init && terraform apply
+# 1. Create infra (ECR repos, VPC, ECS, etc.) — use placeholders since images don't exist yet
+cd terraform && terraform init
+terraform apply -var="session_manager_image=placeholder" -var="app_service_image=placeholder"
 
+# 2. Build and push images (--platform linux/amd64 needed if building on Apple Silicon)
 aws ecr get-login-password --region eu-central-1 \
   | docker login --username AWS --password-stdin <account-id>.dkr.ecr.eu-central-1.amazonaws.com
 
-cd session-manager && docker build -t <ecr-url>:latest . && docker push <ecr-url>:latest
-cd ../app-service && npm install && docker build -t <ecr-url>:latest . && docker push <ecr-url>:latest
+cd ../session-manager && npm install
+docker build --platform linux/amd64 -t <ecr-session-manager-url>:latest .
+docker push <ecr-session-manager-url>:latest
 
+cd ../app-service && npm install
+docker build --platform linux/amd64 -t <ecr-app-service-url>:latest .
+docker push <ecr-app-service-url>:latest
+
+# 3. Redeploy with real images
+cd ../terraform
 terraform apply \
   -var="session_manager_image=<ecr-session-manager-url>:latest" \
   -var="app_service_image=<ecr-app-service-url>:latest"
