@@ -22,20 +22,37 @@ app.use((err, _req, res, _next) => {
 
 const server = http.createServer(app);
 
-async function getTaskIp() {
+async function getTaskPublicIp() {
   const metadataUri = process.env.ECS_CONTAINER_METADATA_URI_V4;
   if (!metadataUri) {
     console.log('ECS metadata not available, using localhost');
     return '127.0.0.1';
   }
 
-  const response = await fetch(`${metadataUri}/task`);
-  const metadata = await response.json();
-  const container = metadata.Containers.find(c => c.Networks && c.Networks.length > 0);
-  if (container) {
-    return container.Networks[0].IPv4Addresses[0];
+  const { EC2Client, DescribeNetworkInterfacesCommand } = require('@aws-sdk/client-ec2');
+  const ec2 = new EC2Client({ region: process.env.AWS_REGION || 'eu-central-1' });
+
+  // Get the ENI attachment from task metadata
+  const taskResponse = await fetch(`${metadataUri}/task`);
+  const taskMetadata = await taskResponse.json();
+  const container = taskMetadata.Containers.find(c => c.Networks && c.Networks.length > 0);
+  if (!container) {
+    throw new Error('Could not find container network info');
   }
-  throw new Error('Could not determine task IP from ECS metadata');
+
+  const privateIp = container.Networks[0].IPv4Addresses[0];
+
+  // Look up the ENI by private IP to find the associated public IP
+  const result = await ec2.send(new DescribeNetworkInterfacesCommand({
+    Filters: [{ Name: 'private-ip-address', Values: [privateIp] }],
+  }));
+
+  const eni = result.NetworkInterfaces[0];
+  if (eni && eni.Association && eni.Association.PublicIp) {
+    return eni.Association.PublicIp;
+  }
+
+  throw new Error(`No public IP found for private IP ${privateIp}`);
 }
 
 async function startup() {
@@ -55,7 +72,7 @@ async function startup() {
 
   // Register with SNS
   try {
-    const ip = await getTaskIp();
+    const ip = await getTaskPublicIp();
     const endpoint = `http://${ip}:${PORT}/events`;
     await subscribe(endpoint);
     console.log(`Subscribed to SNS with endpoint: ${endpoint}`);

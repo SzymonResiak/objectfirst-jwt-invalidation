@@ -81,6 +81,16 @@ curl -s -X POST http://<session-manager-ip>:3000/session/$SESSION_ID/invalidate
 curl -s http://<alb-dns>/whoami -H "Authorization: Bearer $TOKEN"           # 401
 ```
 
+## What i have tested
+
+- Login works → `POST /login` returns a JWT
+- Wrong password → 401
+- Valid token on `/whoami` → 200 with session info
+- No token / tampered token → 401
+- Invalidate a session → `/whoami` starts returning 401 `Session has been invalidated`
+- Invalidate something that doesn't exist → 404
+- Wait 3 min for token to expire → 401 `Token expired`
+
 ## Design decisions
 
 **Why SNS and not SQS?** With SQS, only one consumer picks up each message — so if there are two App Service instances, only one would learn about the invalidation. We could work around this by creating a dedicated queue per instance, but that doesn't autoscale — every time we add or remove an App Service, we'd need to manage queues. On top of that, SQS relies on polling, which introduces a delay. During that window, requests could slip through with an invalidated token before the cache catches up. SNS HTTP push broadcasts to all instances instantly.

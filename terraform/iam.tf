@@ -76,6 +76,11 @@ resource "aws_iam_role_policy" "app_service_task" {
           "sns:ConfirmSubscription",
         ]
         Resource = aws_sns_topic.session_invalidation.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:DescribeNetworkInterfaces"]
+        Resource = "*"
       }
     ]
   })
