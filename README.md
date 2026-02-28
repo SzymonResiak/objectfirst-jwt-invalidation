@@ -84,12 +84,12 @@ curl -s http://<alb-dns>/whoami -H "Authorization: Bearer $TOKEN"           # 40
 ## What i have tested
 
 - Login works → `POST /login` returns a JWT
-- Wrong password → 401
-- Valid token on `/whoami` → 200 with session info
-- No token / tampered token → 401
-- Invalidate a session → `/whoami` starts returning 401 `Session has been invalidated`
-- Invalidate something that doesn't exist → 404
-- Wait 3 min for token to expire → 401 `Token expired`
+- Wrong password on `POST /login` → 401
+- Valid token on `GET /whoami` → 200 with session info
+- No token / tampered token on `GET /whoami` → 401
+- `POST /session/:id/invalidate` → `GET /whoami` starts returning 401 `Session has been invalidated`
+- `POST /session/:id/invalidate` with non-existent id → 404
+- Wait 3 min, call `GET /whoami` with the same token → 401 `Token expired`
 
 ## Design decisions
 
