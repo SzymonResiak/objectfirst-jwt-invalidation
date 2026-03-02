@@ -32,13 +32,13 @@ This project solves that by having each Application Service maintain a local in 
            HTTP POST
 ```
 
-**Session Manager** — issues JWTs (RS256), stores sessions in DynamoDB, publishes invalidation events to SNS.
+**Session Manager:** issues JWTs (RS256), stores sessions in DynamoDB, publishes invalidation events to SNS.
 
-**Application Service** (x2, behind ALB) — verifies JWTs locally using the public key, checks an in-memory blacklist. No database calls per request.
+**Application Service** (x2, behind ALB): verifies JWTs locally using the public key, checks an in-memory blacklist. No database calls per request.
 
-**SNS** — pushes invalidation events directly to each App Service instance IP (not through ALB).
+**SNS:** pushes invalidation events directly to each App Service instance IP (not through ALB).
 
-**DynamoDB** — persistent session store. Used as a write-path by Session Manager and as a one-time fallback read by App Service on startup.
+**DynamoDB:** persistent session store. Used as a write-path by Session Manager and as a one-time fallback read by App Service on startup.
 
 ## API
 
